@@ -34,3 +34,6 @@ target/
 data/
 *.log
 .trae/
+.idea/
+*.iml
+.trae-html-share-packages/
