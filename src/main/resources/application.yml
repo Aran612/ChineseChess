@@ -1,0 +1,47 @@
+server:
+  # 监听所有网卡，手机/其他电脑才能通过局域网 IP 访问
+  address: 0.0.0.0
+  # 云平台（Railway/Render/Fly 等）通常通过 PORT 注入端口
+  port: ${PORT:8080}
+  # 反向代理（nginx / 云负载均衡）场景下正确还原原始协议与主机
+  forward-headers-strategy: framework
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+spring:
+  application:
+    name: chinese-chess
+  web:
+    resources:
+      # 优先读取前端源码目录（改完即时生效），其次回退到 jar 内打包的副本
+      static-locations: file:./frontend/,classpath:/static/
+      cache:
+        cachecontrol:
+          no-cache: true
+
+app:
+  cors:
+    # 前端与后端同源部署时无需 CORS；如分离部署，用 APP_CORS_ORIGINS 指定允许的来源
+    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:8080,http://127.0.0.1:8080}
+  game:
+    max-games: 1000
+    idle-ttl-minutes: 60
+    # 房间可能长时间等待对手或观战，使用更长的空闲回收时间
+    room-idle-ttl-minutes: 720
+  archive:
+    # 对局存档目录（JSON，一局一文件），部署到云上时用 APP_ARCHIVE_DIR 指向可写目录
+    dir: ${APP_ARCHIVE_DIR:./data/games}
+  rate-limit:
+    capacity: 120
+    refill-per-second: 2
+
+logging:
+  level:
+    root: INFO
+    com.xiangqi: INFO

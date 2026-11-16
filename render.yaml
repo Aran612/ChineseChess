@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: chinese-chess
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
