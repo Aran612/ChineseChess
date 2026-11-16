@@ -10,6 +10,19 @@
         }
     }
 
+    // 服务器地址：默认同源（网页版），App/跨设备联网时可配置云端地址
+    function serverBase() {
+        try {
+            const configured = window.localStorage.getItem("xiangqi.server");
+            if (configured) {
+                return configured.replace(/\/+$/, "");
+            }
+        } catch (error) {
+            // ignore
+        }
+        return "";
+    }
+
     async function request(path, options) {
         const config = options || {};
         const headers = {};
@@ -22,13 +35,13 @@
 
         let response;
         try {
-            response = await fetch(path, {
+            response = await fetch(serverBase() + path, {
                 method: config.method || "GET",
                 headers,
                 body: config.body === undefined ? undefined : JSON.stringify(config.body)
             });
         } catch (error) {
-            throw new ApiError("无法连接服务器，请确认后端已启动", 0, "NETWORK_ERROR");
+            throw new ApiError("无法连接服务器，请确认服务器地址与网络", 0, "NETWORK_ERROR");
         }
 
         const text = await response.text();
@@ -126,7 +139,7 @@
             return request(roomPath(code, "/undo/reject"), { method: "POST", token: token });
         },
         roomEventsUrl: function (code) {
-            return roomPath(code, "/events");
+            return serverBase() + roomPath(code, "/events");
         },
 
         records: function (limit) {

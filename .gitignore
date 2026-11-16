@@ -37,3 +37,6 @@ data/
 .idea/
 *.iml
 .trae-html-share-packages/
+
+### 前端/打包依赖 ###
+node_modules/

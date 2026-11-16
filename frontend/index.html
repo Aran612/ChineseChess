@@ -2,134 +2,196 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中国象棋 · 本地对弈 / 联网对战</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>中国象棋</title>
     <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<div class="page">
-    <header class="masthead">
-        <div class="brand">
-            <span class="brand-seal">弈</span>
-            <div class="brand-text">
-                <h1>中国象棋</h1>
-                <p>本地热座 · 联网对战 · 观战复盘</p>
-            </div>
+
+<div class="home-screen" id="homeScreen">
+    <div class="home-inner">
+        <div class="home-brand">
+            <span class="home-seal">弈</span>
+            <h1 class="home-title">中国象棋</h1>
+            <p class="home-subtitle">楚河汉界 · 智趣对弈</p>
         </div>
-        <div class="engine-badge">
-            <span>引擎</span>
-            <strong>Zobrist · 置换表 · 静态搜索</strong>
-        </div>
-    </header>
+        <nav class="home-menu">
+            <button id="homeAiBtn" class="home-entry" type="button">
+                <span class="home-entry-icon">智</span>
+                <span class="home-entry-body">
+                    <span class="home-entry-title">人机对战</span>
+                    <span class="home-entry-sub">与 AI 对弈 · 四档难度</span>
+                </span>
+            </button>
+            <button id="homePvpBtn" class="home-entry" type="button">
+                <span class="home-entry-icon">弈</span>
+                <span class="home-entry-body">
+                    <span class="home-entry-title">双人对弈</span>
+                    <span class="home-entry-sub">同屏热座 · 轮流落子</span>
+                </span>
+            </button>
+            <button id="homeRoomBtn" class="home-entry" type="button">
+                <span class="home-entry-icon">联</span>
+                <span class="home-entry-body">
+                    <span class="home-entry-title">远程对弈</span>
+                    <span class="home-entry-sub">房间码联机 · 实时对战</span>
+                </span>
+            </button>
+        </nav>
+        <p class="home-footer">本地引擎 · 离线可玩</p>
+    </div>
+</div>
 
-    <main class="layout">
-        <section class="board-column">
-            <div class="board-shell">
-                <div class="board" id="board" aria-label="中国象棋棋盘">
-                    <svg class="board-svg" id="boardSvg" viewBox="0 0 900 1000" aria-hidden="true"></svg>
-                    <div class="layer layer-markers" id="markers"></div>
-                    <div class="layer layer-pieces" id="pieces"></div>
+<div class="game-screen hidden" id="gameScreen">
+    <div class="page">
+        <header class="masthead">
+            <button id="backHomeBtn" class="back-btn" type="button">返回</button>
+            <div class="brand">
+                <span class="brand-seal">弈</span>
+                <div class="brand-text">
+                    <h1 id="gameTitle">双人对弈</h1>
+                    <p id="gameSubtitle">同屏热座 · 轮流落子</p>
                 </div>
             </div>
-            <div class="turn-strip" id="turnStrip">
-                <span class="turn-dot" id="turnDot"></span>
-                <span id="turnText">正在连接…</span>
-                <span class="check-flag" id="checkFlag">将军</span>
+            <div class="engine-badge">
+                <span>引擎</span>
+                <strong>Alpha-Beta · 静态搜索</strong>
             </div>
-            <p class="board-hint">先点击己方棋子选中，再点击高亮目标点落子。</p>
-        </section>
+        </header>
 
-        <aside class="side-column">
-            <section class="panel">
-                <h2>对战模式</h2>
-                <div class="mode-tabs">
-                    <button id="modeLocalBtn" class="mode-tab is-active" type="button">本地对弈</button>
-                    <button id="modeRoomBtn" class="mode-tab" type="button">联网对战</button>
-                </div>
-
-                <div class="mode-body" id="localControls">
-                    <div class="actions">
-                        <button id="newGameBtn" class="btn primary" type="button">新的一局</button>
-                        <button id="undoBtn" class="btn" type="button">悔棋</button>
-                        <button id="aiBtn" class="btn" type="button">AI 走一步</button>
+        <main class="layout">
+            <section class="board-column">
+                <div class="board-shell">
+                    <div class="board" id="board" aria-label="中国象棋棋盘">
+                        <svg class="board-svg" id="boardSvg" viewBox="0 0 900 1000" aria-hidden="true"></svg>
+                        <div class="layer layer-markers" id="markers"></div>
+                        <div class="layer layer-pieces" id="pieces"></div>
                     </div>
-                    <div class="resign-group">
-                        <button id="resignRedBtn" class="btn ghost" type="button">红方认输</button>
-                        <button id="resignBlackBtn" class="btn ghost" type="button">黑方认输</button>
-                    </div>
-                    <label class="depth-field">
-                        AI 强度
-                        <select id="aiDepth">
-                            <option value="4">入门 · 4 层</option>
-                            <option value="6" selected>进阶 · 6 层</option>
-                            <option value="10">高级 · 10 层</option>
-                            <option value="20">顶级 · 20 层</option>
-                        </select>
-                    </label>
                 </div>
+                <div class="turn-strip" id="turnStrip">
+                    <span class="turn-dot" id="turnDot"></span>
+                    <span id="turnText">正在连接…</span>
+                    <span class="check-flag" id="checkFlag">将军</span>
+                </div>
+                <p class="board-hint">先点击己方棋子选中，再点击高亮目标点落子。</p>
+            </section>
 
-                <div class="mode-body hidden" id="roomControls">
-                    <div class="room-entry" id="roomEntry">
+            <aside class="side-column">
+                <section class="panel">
+                    <h2>对战模式</h2>
+                    <div class="mode-tabs">
+                        <button id="modeLocalBtn" class="mode-tab is-active" type="button">本地对弈</button>
+                        <button id="modeRoomBtn" class="mode-tab" type="button">联网对战</button>
+                    </div>
+
+                    <div class="mode-body" id="localControls">
+                        <div class="mode-tabs">
+                            <button id="pvpBtn" class="mode-tab is-active" type="button">双人对弈</button>
+                            <button id="aiModeBtn" class="mode-tab" type="button">人机对战</button>
+                        </div>
+
                         <div class="actions">
-                            <button id="createRoomBtn" class="btn primary" type="button">创建房间（执红）</button>
+                            <button id="newGameBtn" class="btn primary" type="button">新的一局</button>
+                            <button id="undoBtn" class="btn" type="button">悔棋</button>
                         </div>
-                        <div class="join-row">
-                            <input id="roomCodeInput" class="room-code-input" type="text" maxlength="8"
-                                   placeholder="输入房间号" autocomplete="off" spellcheck="false"
-                                   autocorrect="off" autocapitalize="characters" inputmode="text">
-                            <button id="joinRoomBtn" class="btn" type="button">加入</button>
+
+                        <div class="ai-settings hidden" id="aiSettings">
+                            <label class="depth-field">
+                                执子
+                                <select id="playerSide">
+                                    <option value="RED" selected>执红（先手）</option>
+                                    <option value="BLACK">执黑（后手）</option>
+                                </select>
+                            </label>
+                            <label class="depth-field">
+                                AI 强度
+                                <select id="aiDepth">
+                                    <option value="4">入门 · 4 层</option>
+                                    <option value="6" selected>进阶 · 6 层</option>
+                                    <option value="10">高级 · 10 层</option>
+                                    <option value="20">顶级 · 20 层</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="resign-group" id="pvpResignGroup">
+                            <button id="resignRedBtn" class="btn ghost" type="button">红方认输</button>
+                            <button id="resignBlackBtn" class="btn ghost" type="button">黑方认输</button>
+                        </div>
+                        <div class="resign-group hidden" id="aiResignGroup">
+                            <button id="aiResignBtn" class="btn ghost" type="button">认输</button>
                         </div>
                     </div>
-                    <div class="room-status" id="roomStatus">尚未进入房间</div>
-                    <div class="room-badges" id="roomBadges"></div>
-                    <div class="room-actions">
-                        <button id="copyRoomBtn" class="btn ghost" type="button" disabled>复制邀请链接</button>
-                        <button id="roomUndoBtn" class="btn ghost" type="button" disabled>悔棋</button>
-                        <button id="roomResignBtn" class="btn ghost" type="button" disabled>认输</button>
-                        <button id="leaveRoomBtn" class="btn ghost" type="button" disabled>离开房间</button>
+
+                    <div class="mode-body hidden" id="roomControls">
+                        <div class="room-entry" id="roomEntry">
+                            <div class="actions">
+                                <button id="createRoomBtn" class="btn primary" type="button">创建房间（执红）</button>
+                            </div>
+                            <div class="join-row">
+                                <input id="roomCodeInput" class="room-code-input" type="text" maxlength="8"
+                                       placeholder="输入房间号" autocomplete="off" spellcheck="false"
+                                       autocorrect="off" autocapitalize="characters" inputmode="text">
+                                <button id="joinRoomBtn" class="btn" type="button">加入</button>
+                            </div>
+                            <div class="join-row server-row">
+                                <input id="serverUrlInput" class="room-code-input" type="text"
+                                       placeholder="服务器地址（留空=本机）" autocomplete="off" spellcheck="false"
+                                       autocorrect="off" autocapitalize="off" inputmode="url">
+                                <button id="saveServerBtn" class="btn" type="button">保存</button>
+                            </div>
+                        </div>
+                        <div class="room-status" id="roomStatus">尚未进入房间</div>
+                        <div class="room-badges" id="roomBadges"></div>
+                        <div class="room-actions">
+                            <button id="copyRoomBtn" class="btn ghost" type="button" disabled>复制邀请链接</button>
+                            <button id="roomUndoBtn" class="btn ghost" type="button" disabled>悔棋</button>
+                            <button id="roomResignBtn" class="btn ghost" type="button" disabled>认输</button>
+                            <button id="leaveRoomBtn" class="btn ghost" type="button" disabled>离开房间</button>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section class="panel">
-                <h2>对局状态</h2>
-                <div class="status-line" id="statusLine">正在连接服务器…</div>
-                <div class="result-line" id="resultLine"></div>
-                <div class="meta-row"><span>模式</span><strong id="modeText">本地</strong></div>
-                <div class="meta-row"><span>回合</span><strong id="plyText">0</strong></div>
-                <div class="meta-row"><span>对局号</span><strong id="gameIdText">—</strong></div>
-                <div class="clock-row">
-                    <div class="clock-card red">
-                        <span>红方用时</span>
-                        <strong id="redClock">00:00</strong>
+                <section class="panel">
+                    <h2>对局状态</h2>
+                    <div class="status-line" id="statusLine">正在连接服务器…</div>
+                    <div class="result-line" id="resultLine"></div>
+                    <div class="meta-row"><span>模式</span><strong id="modeText">本地</strong></div>
+                    <div class="meta-row"><span>回合</span><strong id="plyText">0</strong></div>
+                    <div class="meta-row"><span>对局号</span><strong id="gameIdText">—</strong></div>
+                    <div class="clock-row">
+                        <div class="clock-card red">
+                            <span>红方用时</span>
+                            <strong id="redClock">00:00</strong>
+                        </div>
+                        <div class="clock-card black">
+                            <span>黑方用时</span>
+                            <strong id="blackClock">00:00</strong>
+                        </div>
                     </div>
-                    <div class="clock-card black">
-                        <span>黑方用时</span>
-                        <strong id="blackClock">00:00</strong>
+                </section>
+
+                <section class="panel history-panel">
+                    <h2>
+                        棋谱
+                        <button id="exportBtn" class="mini-btn" type="button" disabled>导出</button>
+                    </h2>
+                    <div class="history" id="history">
+                        <div class="history-empty">尚未落子</div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section class="panel history-panel">
-                <h2>
-                    棋谱
-                    <button id="exportBtn" class="mini-btn" type="button" disabled>导出</button>
-                </h2>
-                <div class="history" id="history">
-                    <div class="history-empty">尚未落子</div>
-                </div>
-            </section>
+                <section class="panel records-panel">
+                    <h2>历史对局</h2>
+                    <div class="records" id="records">
+                        <div class="history-empty">加载中…</div>
+                    </div>
+                </section>
+            </aside>
+        </main>
 
-            <section class="panel records-panel">
-                <h2>历史对局</h2>
-                <div class="records" id="records">
-                    <div class="history-empty">加载中…</div>
-                </div>
-            </section>
-        </aside>
-    </main>
-
-    <footer class="footer">服务端权威校验 · 令牌会话 · 单局并发保护 · 本地存档</footer>
+        <footer class="footer">服务端权威校验 · 令牌会话 · 单局并发保护 · 本地存档</footer>
+    </div>
 </div>
 
 <dialog class="replay-dialog" id="replayDialog">
@@ -164,6 +226,7 @@
 </div>
 
 <script src="js/api.js" defer></script>
+<script src="js/engine.js" defer></script>
 <script src="js/sound.js" defer></script>
 <script src="js/board.js" defer></script>
 <script src="js/app.js" defer></script>

@@ -6,6 +6,14 @@
     const SIDE_LABEL = { RED: "红方", BLACK: "黑方" };
 
     const elements = {
+        homeScreen: document.getElementById("homeScreen"),
+        gameScreen: document.getElementById("gameScreen"),
+        homeAiBtn: document.getElementById("homeAiBtn"),
+        homePvpBtn: document.getElementById("homePvpBtn"),
+        homeRoomBtn: document.getElementById("homeRoomBtn"),
+        backHomeBtn: document.getElementById("backHomeBtn"),
+        gameTitle: document.getElementById("gameTitle"),
+        gameSubtitle: document.getElementById("gameSubtitle"),
         board: document.getElementById("board"),
         turnStrip: document.getElementById("turnStrip"),
         turnText: document.getElementById("turnText"),
@@ -20,7 +28,13 @@
         blackClock: document.getElementById("blackClock"),
         newGameBtn: document.getElementById("newGameBtn"),
         undoBtn: document.getElementById("undoBtn"),
-        aiBtn: document.getElementById("aiBtn"),
+        pvpBtn: document.getElementById("pvpBtn"),
+        aiModeBtn: document.getElementById("aiModeBtn"),
+        aiSettings: document.getElementById("aiSettings"),
+        playerSide: document.getElementById("playerSide"),
+        aiResignBtn: document.getElementById("aiResignBtn"),
+        pvpResignGroup: document.getElementById("pvpResignGroup"),
+        aiResignGroup: document.getElementById("aiResignGroup"),
         resignRedBtn: document.getElementById("resignRedBtn"),
         resignBlackBtn: document.getElementById("resignBlackBtn"),
         aiDepth: document.getElementById("aiDepth"),
@@ -33,6 +47,8 @@
         createRoomBtn: document.getElementById("createRoomBtn"),
         joinRoomBtn: document.getElementById("joinRoomBtn"),
         roomCodeInput: document.getElementById("roomCodeInput"),
+        serverUrlInput: document.getElementById("serverUrlInput"),
+        saveServerBtn: document.getElementById("saveServerBtn"),
         roomStatus: document.getElementById("roomStatus"),
         roomBadges: document.getElementById("roomBadges"),
         copyRoomBtn: document.getElementById("copyRoomBtn"),
@@ -56,7 +72,6 @@
 
     let boardView = null;
     let replayBoardView = null;
-    let session = null;
     let room = null;
     let roomSource = null;
     let roomConnected = false;
@@ -65,6 +80,8 @@
     let lastStateVersion = -1;
     let undoRequest = null;
     let mode = "LOCAL";
+    let localMode = "PVP";
+    let playerSide = "RED";
     let state = null;
     let selected = null;
     let busy = false;
@@ -79,6 +96,11 @@
         boardView.onCell = handleCell;
         replayBoardView = new window.XiangqiBoard(elements.replayBoard);
         bindActions();
+        try {
+            elements.serverUrlInput.value = window.localStorage.getItem("xiangqi.server") || "";
+        } catch (error) {
+            // ignore
+        }
         render();
         document.addEventListener("pointerdown", () => window.XiangqiSound.unlock(), { once: true });
         window.setInterval(tickClocks, 500);
@@ -92,20 +114,31 @@
 
         const queryRoom = new URLSearchParams(window.location.search).get("room");
         if (queryRoom) {
-            mode = "ROOM";
-            updateModeUi();
+            enterGame("ROOM");
             enterRoom(queryRoom);
         } else {
-            restoreLocalSession();
+            showHome();
         }
     }
 
     function bindActions() {
+        elements.homeAiBtn.addEventListener("click", () => enterGame("AI"));
+        elements.homePvpBtn.addEventListener("click", () => enterGame("PVP"));
+        elements.homeRoomBtn.addEventListener("click", () => enterGame("ROOM"));
+        elements.backHomeBtn.addEventListener("click", showHome);
         elements.newGameBtn.addEventListener("click", () => createNewGame(false));
         elements.undoBtn.addEventListener("click", undoMove);
-        elements.aiBtn.addEventListener("click", runAiMove);
+        elements.pvpBtn.addEventListener("click", () => switchLocalMode("PVP"));
+        elements.aiModeBtn.addEventListener("click", () => switchLocalMode("AI"));
+        elements.aiResignBtn.addEventListener("click", () => resignLocal(playerSide));
         elements.resignRedBtn.addEventListener("click", () => resignLocal("RED"));
         elements.resignBlackBtn.addEventListener("click", () => resignLocal("BLACK"));
+        elements.playerSide.addEventListener("change", () => {
+            playerSide = elements.playerSide.value;
+            if (localMode === "AI") {
+                createNewGame(false);
+            }
+        });
         elements.exportBtn.addEventListener("click", exportNotation);
         elements.modeLocalBtn.addEventListener("click", () => switchMode("LOCAL"));
         elements.modeRoomBtn.addEventListener("click", () => switchMode("ROOM"));
@@ -123,6 +156,7 @@
                 elements.joinRoomBtn.click();
             }
         });
+        elements.saveServerBtn.addEventListener("click", saveServer);
         elements.copyRoomBtn.addEventListener("click", copyInviteLink);
         elements.roomUndoBtn.addEventListener("click", handleRoomUndo);
         elements.roomResignBtn.addEventListener("click", resignRoom);
@@ -137,6 +171,46 @@
     }
 
     /* ==================== 模式切换 ==================== */
+
+    function showHome() {
+        closeRoomStream();
+        elements.gameScreen.classList.add("hidden");
+        elements.homeScreen.classList.remove("hidden");
+    }
+
+    function showGame() {
+        elements.homeScreen.classList.add("hidden");
+        elements.gameScreen.classList.remove("hidden");
+    }
+
+    function enterGame(target) {
+        if (target === "ROOM") {
+            switchMode("ROOM");
+            showGame();
+            return;
+        }
+        closeRoomStream();
+        mode = "LOCAL";
+        localMode = target === "AI" ? "AI" : "PVP";
+        selected = null;
+        updateModeUi();
+        updateLocalModeUi();
+        showGame();
+        loadLocalGame();
+    }
+
+    function updateGameTitle() {
+        if (mode === "ROOM") {
+            elements.gameTitle.textContent = "远程对弈";
+            elements.gameSubtitle.textContent = "房间码联机 · 实时对战";
+        } else if (localMode === "AI") {
+            elements.gameTitle.textContent = "人机对战";
+            elements.gameSubtitle.textContent = "你执" + (playerSide === "RED" ? "红" : "黑") + " · AI 对手";
+        } else {
+            elements.gameTitle.textContent = "双人对弈";
+            elements.gameSubtitle.textContent = "同屏热座 · 轮流落子";
+        }
+    }
 
     function switchMode(next) {
         if (busy) {
@@ -167,8 +241,28 @@
         elements.modeRoomBtn.classList.toggle("is-active", mode === "ROOM");
         elements.localControls.classList.toggle("hidden", mode !== "LOCAL");
         elements.roomControls.classList.toggle("hidden", mode !== "ROOM");
+        updateLocalModeUi();
         updateRoomPanel();
         renderButtons();
+    }
+
+    function switchLocalMode(next) {
+        if (busy || mode !== "LOCAL" || localMode === next) {
+            return;
+        }
+        localMode = next;
+        selected = null;
+        updateLocalModeUi();
+        createNewGame(true);
+    }
+
+    function updateLocalModeUi() {
+        const aiMode = localMode === "AI";
+        elements.pvpBtn.classList.toggle("is-active", !aiMode);
+        elements.aiModeBtn.classList.toggle("is-active", aiMode);
+        elements.aiSettings.classList.toggle("hidden", !aiMode);
+        elements.pvpResignGroup.classList.toggle("hidden", aiMode);
+        elements.aiResignGroup.classList.toggle("hidden", !aiMode);
     }
 
     /* ==================== 本地对弈 ==================== */
@@ -180,7 +274,7 @@
                 return null;
             }
             const parsed = JSON.parse(raw);
-            if (typeof parsed.gameId === "string" && typeof parsed.token === "string") {
+            if (typeof parsed.gameId === "string" && Array.isArray(parsed.pieces)) {
                 return parsed;
             }
         } catch (error) {
@@ -191,7 +285,7 @@
 
     function writeLocalSession() {
         try {
-            window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+            window.localStorage.setItem(SESSION_KEY, JSON.stringify(state));
         } catch (error) {
             // localStorage 不可用时不影响当前对局
         }
@@ -208,35 +302,17 @@
     async function restoreLocalSession() {
         const saved = readLocalSession();
         if (saved) {
-            showLoading(true, "正在恢复对局…");
-            try {
-                const view = await window.XiangqiApi.getGame(saved.gameId, saved.token);
-                session = saved;
-                applyGameView(view);
-                return;
-            } catch (error) {
-                clearLocalSession();
-            } finally {
-                showLoading(false);
-            }
+            applyGameView(saved);
+            return;
         }
         await createNewGame(true);
     }
 
     async function loadLocalGame() {
         const saved = readLocalSession();
-        showLoading(true, "正在恢复对局…");
-        try {
-            if (saved) {
-                const view = await window.XiangqiApi.getGame(saved.gameId, saved.token);
-                session = saved;
-                applyGameView(view);
-                return;
-            }
-        } catch (error) {
-            clearLocalSession();
-        } finally {
-            showLoading(false);
+        if (saved) {
+            applyGameView(saved);
+            return;
         }
         await createNewGame(true);
     }
@@ -251,10 +327,7 @@
         }
         setBusy(true);
         try {
-            const created = await window.XiangqiApi.createGame();
-            session = { gameId: created.gameId, token: created.token };
-            writeLocalSession();
-            applyGameView(created.game);
+            applyGameView(window.XiangqiEngine.newGame());
         } catch (error) {
             window.XiangqiSound.error();
             showToast(error.message);
@@ -269,7 +342,7 @@
             if (mode === "ROOM") {
                 applyRoomView(await window.XiangqiApi.roomMove(room.code, room.token, from, to));
             } else {
-                applyGameView(await window.XiangqiApi.move(session.gameId, session.token, from, to));
+                applyGameView(window.XiangqiEngine.move(state, from, to));
             }
         } catch (error) {
             window.XiangqiSound.error();
@@ -285,8 +358,14 @@
         }
         setBusy(true);
         try {
-            const view = await window.XiangqiApi.undo(session.gameId, session.token);
-            applyGameView(view);
+            let next = window.XiangqiEngine.undo(state);
+            if (localMode === "AI") {
+                // 人机模式：回退到轮到玩家为止
+                while (next.status === "PLAYING" && next.turn !== playerSide && next.history.length > 0) {
+                    next = window.XiangqiEngine.undo(next);
+                }
+            }
+            applyGameView(next);
         } catch (error) {
             window.XiangqiSound.error();
             showToast(error.message);
@@ -304,8 +383,7 @@
         }
         setBusy(true);
         try {
-            const view = await window.XiangqiApi.resign(session.gameId, session.token, side);
-            applyGameView(view);
+            applyGameView(window.XiangqiEngine.resign(state, side));
         } catch (error) {
             window.XiangqiSound.error();
             showToast(error.message);
@@ -315,15 +393,19 @@
     }
 
     async function runAiMove() {
-        if (busy || mode !== "LOCAL" || !state || state.status !== "PLAYING") {
+        if (mode !== "LOCAL" || localMode !== "AI" || busy || !state || state.status !== "PLAYING") {
+            return;
+        }
+        if (state.turn === playerSide) {
             return;
         }
         const depth = Number(elements.aiDepth.value) || 6;
         setBusy(true);
         showLoading(true, "AI 正在思考…");
         try {
-            const view = await window.XiangqiApi.aiMove(session.gameId, session.token, depth);
-            applyGameView(view);
+            // 先让 loading 渲染出来，再执行同步搜索
+            await new Promise((resolve) => window.setTimeout(resolve, 30));
+            applyGameView(window.XiangqiEngine.aiMove(state, depth));
         } catch (error) {
             window.XiangqiSound.error();
             showToast(error.message);
@@ -361,6 +443,20 @@
         } catch (error) {
             // ignore
         }
+    }
+
+    function saveServer() {
+        const value = elements.serverUrlInput.value.trim().replace(/\/+$/, "");
+        try {
+            if (value) {
+                window.localStorage.setItem("xiangqi.server", value);
+            } else {
+                window.localStorage.removeItem("xiangqi.server");
+            }
+        } catch (error) {
+            // ignore
+        }
+        showToast(value ? "服务器地址已保存：" + value : "已恢复为本机服务器");
     }
 
     async function createRoom() {
@@ -634,6 +730,12 @@
         handleEffects(previous, view);
         updateClock(view);
         render();
+        if (mode === "LOCAL") {
+            writeLocalSession();
+            if (localMode === "AI" && state.status === "PLAYING" && state.turn !== playerSide) {
+                window.setTimeout(runAiMove, 250);
+            }
+        }
     }
 
     function applyRoomView(view) {
@@ -706,6 +808,10 @@
                 return;
             }
         }
+        if (mode === "LOCAL" && localMode === "AI" && state.turn !== playerSide) {
+            showToast("轮到 AI 行棋");
+            return;
+        }
 
         if (selected && isLegalTarget(position)) {
             window.XiangqiSound.select();
@@ -744,6 +850,7 @@
         boardView.render(state, selected);
         renderTurnStrip();
         renderPanels();
+        updateGameTitle();
         renderHistory();
         renderButtons();
         updateModeUi();
@@ -791,8 +898,10 @@
         elements.gameIdText.textContent = state ? shortId(state.gameId) : "—";
         if (mode === "ROOM") {
             elements.modeText.textContent = room ? "联网 · " + roleLabel(room.role) : "联网待加入";
+        } else if (localMode === "AI") {
+            elements.modeText.textContent = "人机 · 你执" + (playerSide === "RED" ? "红" : "黑");
         } else {
-            elements.modeText.textContent = "本地热座";
+            elements.modeText.textContent = "双人对弈";
         }
     }
 
@@ -853,11 +962,13 @@
     function renderButtons() {
         const playing = Boolean(state) && state.status === "PLAYING";
         const local = mode === "LOCAL";
+        const pvp = local && localMode === "PVP";
+        const aiMode = local && localMode === "AI";
         elements.newGameBtn.disabled = busy || !local;
         elements.undoBtn.disabled = busy || !local || !state || state.history.length === 0;
-        elements.aiBtn.disabled = busy || !local || !playing;
-        elements.resignRedBtn.disabled = busy || !local || !playing;
-        elements.resignBlackBtn.disabled = busy || !local || !playing;
+        elements.resignRedBtn.disabled = busy || !pvp || !playing;
+        elements.resignBlackBtn.disabled = busy || !pvp || !playing;
+        elements.aiResignBtn.disabled = busy || !aiMode || !playing;
         elements.exportBtn.disabled = !state || state.history.length === 0;
         elements.createRoomBtn.disabled = busy || mode !== "ROOM" || Boolean(room);
         elements.joinRoomBtn.disabled = busy || mode !== "ROOM";

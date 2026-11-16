@@ -34,6 +34,158 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* ---------- 主页 ---------- */
+
+.home-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px 40px;
+}
+
+.home-inner {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 34px;
+}
+
+.home-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+}
+
+.home-seal {
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 20px;
+    color: #fdf6e9;
+    font-size: 46px;
+    line-height: 1;
+    background: linear-gradient(160deg, #c33a2b 0%, #96231a 100%);
+    box-shadow: 0 12px 28px rgba(150, 35, 26, 0.32), inset 0 0 0 2px rgba(255, 235, 210, 0.45);
+    transform: rotate(-3deg);
+}
+
+.home-title {
+    margin: 0;
+    font-size: 44px;
+    letter-spacing: 12px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.home-subtitle {
+    margin: 0;
+    font-size: 15px;
+    letter-spacing: 4px;
+    color: var(--ink-soft);
+}
+
+.home-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.home-entry {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 18px 20px;
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    background: var(--panel-bg);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    text-align: left;
+    color: var(--ink);
+    font-family: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.home-entry:active {
+    transform: translateY(2px);
+    box-shadow: 0 8px 20px rgba(84, 56, 24, 0.14);
+}
+
+.home-entry-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    font-size: 24px;
+    color: #fdf6e9;
+    background: linear-gradient(160deg, #8a5a2b 0%, #6b4520 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 235, 210, 0.3);
+}
+
+.home-entry:nth-child(1) .home-entry-icon {
+    background: linear-gradient(160deg, #c33a2b 0%, #96231a 100%);
+}
+
+.home-entry:nth-child(2) .home-entry-icon {
+    background: linear-gradient(160deg, #2f6b4f 0%, #1f4a35 100%);
+}
+
+.home-entry:nth-child(3) .home-entry-icon {
+    background: linear-gradient(160deg, #2b5d8f 0%, #1c3f63 100%);
+}
+
+.home-entry-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.home-entry-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 3px;
+}
+
+.home-entry-sub {
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+}
+
+.home-footer {
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--ink-soft);
+    opacity: 0.7;
+}
+
+.back-btn {
+    appearance: none;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    background: var(--panel-bg);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+}
+
 .page {
     max-width: 1240px;
     margin: 0 auto;
@@ -360,6 +512,22 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     margin-top: 10px;
+}
+
+.ai-settings {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(138, 90, 43, 0.18);
+}
+
+.ai-settings .depth-field {
+    margin-top: 10px;
+    padding-top: 0;
+    border-top: none;
+}
+
+.ai-settings .depth-field:first-child {
+    margin-top: 0;
 }
 
 .depth-field {
@@ -1003,6 +1171,20 @@ body {
 }
 
 @media (max-width: 620px) {
+    .game-screen .page {
+        padding: 10px 6px 20px;
+    }
+
+    .masthead {
+        margin-bottom: 16px;
+    }
+
+    .board-shell {
+        max-width: none;
+        padding: 6px;
+        border-radius: 14px;
+    }
+
     /* 手机端：把“对战模式”面板提到棋盘上方，开房/输房间号不用先滚过棋盘 */
     .layout {
         display: flex;
