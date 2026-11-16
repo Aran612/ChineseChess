@@ -23,6 +23,9 @@ final class GameSession {
     private volatile byte[] redTokenHash;
     private volatile byte[] blackTokenHash;
 
+    /** 当前待处理的悔棋请求发起方（RED/BLACK），无请求时为 null。 */
+    private volatile Side undoRequester;
+
     private final long createdAt;
     private volatile long updatedAt;
     private volatile long lastAccess;
@@ -157,5 +160,13 @@ final class GameSession {
 
     byte[] blackTokenHash() {
         return blackTokenHash;
+    }
+
+    Side undoRequester() {
+        return undoRequester;
+    }
+
+    void setUndoRequester(Side requester) {
+        undoRequester = requester;
     }
 }

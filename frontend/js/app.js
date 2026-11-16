@@ -36,6 +36,7 @@
         roomStatus: document.getElementById("roomStatus"),
         roomBadges: document.getElementById("roomBadges"),
         copyRoomBtn: document.getElementById("copyRoomBtn"),
+        roomUndoBtn: document.getElementById("roomUndoBtn"),
         roomResignBtn: document.getElementById("roomResignBtn"),
         leaveRoomBtn: document.getElementById("leaveRoomBtn"),
         replayDialog: document.getElementById("replayDialog"),
@@ -62,6 +63,7 @@
     let roomPollTimer = 0;
     let lastSseAt = 0;
     let lastStateVersion = -1;
+    let undoRequest = null;
     let mode = "LOCAL";
     let state = null;
     let selected = null;
@@ -122,6 +124,7 @@
             }
         });
         elements.copyRoomBtn.addEventListener("click", copyInviteLink);
+        elements.roomUndoBtn.addEventListener("click", handleRoomUndo);
         elements.roomResignBtn.addEventListener("click", resignRoom);
         elements.leaveRoomBtn.addEventListener("click", leaveRoom);
 
@@ -519,6 +522,50 @@
         }
     }
 
+    async function handleRoomUndo() {
+        if (busy || !room || !room.token || !state || state.status !== "PLAYING") {
+            return;
+        }
+        // 对方已发起悔棋请求：本按钮变成“同意悔棋”，确认后同意，取消则拒绝
+        if (undoRequest && undoRequest !== room.role) {
+            if (!window.confirm("对方请求悔棋，是否同意？")) {
+                setBusy(true);
+                try {
+                    applyRoomView(await window.XiangqiApi.roomRejectUndo(room.code, room.token));
+                } catch (error) {
+                    window.XiangqiSound.error();
+                    showToast(error.message);
+                } finally {
+                    setBusy(false);
+                }
+                return;
+            }
+            setBusy(true);
+            try {
+                applyRoomView(await window.XiangqiApi.roomAcceptUndo(room.code, room.token));
+            } catch (error) {
+                window.XiangqiSound.error();
+                showToast(error.message);
+            } finally {
+                setBusy(false);
+            }
+            return;
+        }
+        // 无请求：发起悔棋
+        if (!window.confirm("请求悔棋？需对方同意后生效")) {
+            return;
+        }
+        setBusy(true);
+        try {
+            applyRoomView(await window.XiangqiApi.roomRequestUndo(room.code, room.token));
+        } catch (error) {
+            window.XiangqiSound.error();
+            showToast(error.message);
+        } finally {
+            setBusy(false);
+        }
+    }
+
     function leaveRoom() {
         if (!room) {
             return;
@@ -529,6 +576,7 @@
         const code = room.code;
         closeRoomStream();
         room = null;
+        undoRequest = null;
         lastStateVersion = -1;
         removeRoomEntry(code);
         updateUrlRoom(null);
@@ -605,6 +653,7 @@
             lastStateVersion = view.version;
         }
         updateRoomBadges(view);
+        undoRequest = view.undoRequest || null;
         applyGameView(view.game);
         updateRoomPanel();
         if (typeof view.version === "number") {
@@ -815,6 +864,8 @@
         elements.copyRoomBtn.disabled = !room || busy;
         elements.leaveRoomBtn.disabled = !room || busy;
         elements.roomResignBtn.disabled = busy || !room || !room.token || !playing;
+        elements.roomUndoBtn.disabled = busy || !room || !room.token || !playing
+            || (Boolean(undoRequest) && undoRequest === room.role);
     }
 
     function updateRoomPanel() {
@@ -831,6 +882,15 @@
         }
         if (inRoom && mode === "ROOM") {
             elements.roomCodeInput.value = room.code;
+        }
+        if (elements.roomUndoBtn) {
+            if (undoRequest && undoRequest === room.role) {
+                elements.roomUndoBtn.textContent = "已请求悔棋";
+            } else if (undoRequest && undoRequest !== room.role && room.role !== "SPECTATOR") {
+                elements.roomUndoBtn.textContent = "同意悔棋";
+            } else {
+                elements.roomUndoBtn.textContent = "悔棋";
+            }
         }
     }
 

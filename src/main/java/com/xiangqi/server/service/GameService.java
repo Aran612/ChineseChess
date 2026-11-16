@@ -263,6 +263,7 @@ public class GameService {
                 throw GameException.conflict("还没轮到你走棋");
             }
             game.play(new Move(toPosition(request.from()), toPosition(request.to())));
+            session.setUndoRequester(null);
             session.bumpVersion();
             persist(session);
             view = roomView(session);
@@ -286,6 +287,91 @@ public class GameService {
             session.game().resign(side);
             session.bumpVersion();
             persist(session);
+            view = roomView(session);
+        } finally {
+            session.lock().unlock();
+        }
+        broadcast(session);
+        return view;
+    }
+
+    /**
+     * 发起悔棋请求：任意一方都可发起，对方同意后执行。不限次数。
+     */
+    public RoomView requestUndo(String rawCode, String token) {
+        GameSession session = requireRoom(rawCode);
+        RoomView view;
+        session.lock().lock();
+        try {
+            session.touch();
+            Side side = requireSeat(session, token);
+            if (session.game().isFinished()) {
+                throw GameException.conflict("对局已结束，无法悔棋");
+            }
+            if (session.game().history().isEmpty()) {
+                throw GameException.conflict("当前没有可悔的棋步");
+            }
+            if (session.undoRequester() != null) {
+                throw GameException.conflict("已有待处理的悔棋请求");
+            }
+            session.setUndoRequester(side);
+            session.bumpVersion();
+            view = roomView(session);
+        } finally {
+            session.lock().unlock();
+        }
+        broadcast(session);
+        return view;
+    }
+
+    /**
+     * 同意悔棋：仅对方（非发起方）可操作，同意后撤销到发起方最近一次落子之前。
+     */
+    public RoomView acceptUndo(String rawCode, String token) {
+        GameSession session = requireRoom(rawCode);
+        RoomView view;
+        session.lock().lock();
+        try {
+            session.touch();
+            Side side = requireSeat(session, token);
+            Side requester = session.undoRequester();
+            if (requester == null) {
+                throw GameException.conflict("没有待处理的悔棋请求");
+            }
+            if (requester == side) {
+                throw GameException.conflict("不能同意自己的悔棋请求");
+            }
+            undoForRequester(session.game(), requester);
+            session.setUndoRequester(null);
+            session.bumpVersion();
+            persist(session);
+            view = roomView(session);
+        } finally {
+            session.lock().unlock();
+        }
+        broadcast(session);
+        return view;
+    }
+
+    /**
+     * 拒绝悔棋：仅对方（非发起方）可操作，清除待处理的悔棋请求。
+     */
+    public RoomView rejectUndo(String rawCode, String token) {
+        GameSession session = requireRoom(rawCode);
+        RoomView view;
+        session.lock().lock();
+        try {
+            session.touch();
+            Side side = requireSeat(session, token);
+            Side requester = session.undoRequester();
+            if (requester == null) {
+                throw GameException.conflict("没有待处理的悔棋请求");
+            }
+            if (requester == side) {
+                throw GameException.conflict("不能处理自己的悔棋请求");
+            }
+            session.setUndoRequester(null);
+            session.bumpVersion();
             view = roomView(session);
         } finally {
             session.lock().unlock();
@@ -390,6 +476,32 @@ public class GameService {
         return session;
     }
 
+    private Side requireSeat(GameSession session, String token) {
+        Side side = session.sideForToken(token);
+        if (side == null) {
+            throw GameException.unauthorized();
+        }
+        return side;
+    }
+
+    /**
+     * 悔棋：撤销到发起方最近一次落子之前，让发起方重新走棋。
+     */
+    private void undoForRequester(ChessGame game, Side requester) {
+        boolean hasMove = game.history().stream().anyMatch(entry -> entry.side() == requester);
+        if (!hasMove) {
+            throw GameException.conflict("当前没有可悔的棋步");
+        }
+        while (!game.history().isEmpty()) {
+            HistoryEntry last = game.history().get(game.history().size() - 1);
+            Side mover = last.side();
+            game.undo();
+            if (mover == requester) {
+                break;
+            }
+        }
+    }
+
     private String normalizeCode(String rawCode) {
         if (rawCode == null) {
             throw GameException.badRequest("房间号不合法");
@@ -461,6 +573,7 @@ public class GameService {
                     true,
                     session.hasBlackSeat(),
                     session.version(),
+                    session.undoRequester() == null ? null : session.undoRequester().name(),
                     viewOf(session.id(), session.game())
             );
         } finally {

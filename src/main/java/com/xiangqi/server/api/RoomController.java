@@ -67,6 +67,27 @@ public class RoomController {
         return gameService.resignRoom(code, token);
     }
 
+    @PostMapping("/{code}/undo")
+    public RoomView requestUndo(
+            @PathVariable String code,
+            @RequestHeader(value = "X-Game-Token", required = false) String token) {
+        return gameService.requestUndo(code, token);
+    }
+
+    @PostMapping("/{code}/undo/accept")
+    public RoomView acceptUndo(
+            @PathVariable String code,
+            @RequestHeader(value = "X-Game-Token", required = false) String token) {
+        return gameService.acceptUndo(code, token);
+    }
+
+    @PostMapping("/{code}/undo/reject")
+    public RoomView rejectUndo(
+            @PathVariable String code,
+            @RequestHeader(value = "X-Game-Token", required = false) String token) {
+        return gameService.rejectUndo(code, token);
+    }
+
     /**
      * SSE 实时同步：观战者与玩家都可通过 EventSource 订阅。
      */

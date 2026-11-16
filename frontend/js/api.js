@@ -116,6 +116,15 @@
         roomResign: function (code, token) {
             return request(roomPath(code, "/resign"), { method: "POST", token: token });
         },
+        roomRequestUndo: function (code, token) {
+            return request(roomPath(code, "/undo"), { method: "POST", token: token });
+        },
+        roomAcceptUndo: function (code, token) {
+            return request(roomPath(code, "/undo/accept"), { method: "POST", token: token });
+        },
+        roomRejectUndo: function (code, token) {
+            return request(roomPath(code, "/undo/reject"), { method: "POST", token: token });
+        },
         roomEventsUrl: function (code) {
             return roomPath(code, "/events");
         },

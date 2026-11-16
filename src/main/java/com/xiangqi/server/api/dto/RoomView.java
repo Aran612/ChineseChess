@@ -10,6 +10,7 @@ public record RoomView(
         boolean redJoined,
         boolean blackJoined,
         long version,
+        String undoRequest,
         GameView game
 ) {
 }
