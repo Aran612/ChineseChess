@@ -3,6 +3,7 @@
   "appName": "纯净中国象棋",
   "webDir": "frontend",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "zoomEnabled": false
   }
 }

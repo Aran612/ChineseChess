@@ -20,6 +20,8 @@ html,
 body {
     margin: 0;
     min-height: 100%;
+    width: 100%;
+    overflow-x: hidden;
 }
 
 body {
@@ -543,15 +545,38 @@ body {
     color: var(--ink-soft);
 }
 
-.depth-field select {
+.depth-label {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.seg-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.seg-btn {
     appearance: none;
-    padding: 6px 28px 6px 10px;
-    border-radius: 8px;
     border: 1px solid rgba(138, 90, 43, 0.28);
-    background: #fffdf7 url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238a5a2b' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 9px center;
+    border-radius: 999px;
+    padding: 6px 12px;
+    background: #fffdf7;
     font-family: inherit;
     font-size: 13px;
+    letter-spacing: 1px;
     color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.seg-btn.is-active {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff6e9;
 }
 
 .history-panel {
@@ -1170,26 +1195,32 @@ body {
     }
 }
 
-@media (max-width: 620px) {
+@media (max-width: 900px) {
     .game-screen .page {
-        padding: 10px 6px 20px;
+        padding: 0 0 16px;
     }
 
     .masthead {
-        margin-bottom: 16px;
+        margin-bottom: 10px;
+        padding: 6px 10px;
     }
 
     .board-shell {
         max-width: none;
-        padding: 6px;
-        border-radius: 14px;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
     }
 
-    /* 手机端：把“对战模式”面板提到棋盘上方，开房/输房间号不用先滚过棋盘 */
+    .board {
+        border-radius: 0;
+    }
+
+    /* 手机端：棋盘铺满屏幕置顶，其余面板置于棋盘下方 */
     .layout {
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 12px;
     }
 
     .side-column {
@@ -1197,11 +1228,11 @@ body {
     }
 
     .side-column > .panel:nth-of-type(1) {
-        order: 0;
+        order: 1;
     }
 
     .board-column {
-        order: 1;
+        order: 0;
     }
 
     .side-column > .panel:nth-of-type(2) {
@@ -1232,9 +1263,20 @@ body {
     }
 
 
+    .brand-seal {
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+        border-radius: 10px;
+    }
+
+    .brand {
+        gap: 10px;
+    }
+
     .brand-text h1 {
-        font-size: 26px;
-        letter-spacing: 4px;
+        font-size: 20px;
+        letter-spacing: 3px;
     }
 
     .engine-badge {
@@ -1244,5 +1286,296 @@ body {
     .turn-strip {
         font-size: 15px;
     }
+}
+
+/* 横屏手机：棋盘按可视高度适配，控制面板放到右侧并可滚动 */
+@media (orientation: landscape) and (max-height: 820px) {
+    .game-screen .page {
+        padding: 8px 14px;
+    }
+
+    .game-screen .masthead {
+        margin-bottom: 10px;
+    }
+
+    .game-screen .layout {
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 16px;
+        align-items: center;
+    }
+
+    .game-screen .board-shell {
+        max-width: none;
+        width: min(100%, calc((100vh - 150px) * 0.9));
+        padding: 8px;
+        border-radius: 14px;
+    }
+
+    .game-screen .side-column {
+        max-height: calc(100vh - 130px);
+        overflow-y: auto;
+    }
+}
+
+/* ==================== 对局页全新布局（移动优先） ==================== */
+
+.game-screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+.game-screen .game-page {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* 顶部信息条 */
+.game-screen .game-topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    padding-top: 8px;
+}
+
+.game-screen .back-btn.round {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 26px;
+    line-height: 1;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+}
+
+.game-screen .player-chip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.game-screen .avatar {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    color: #fdf6e9;
+    font-size: 20px;
+    line-height: 1;
+    background: linear-gradient(160deg, #c33a2b 0%, #96231a 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 235, 210, 0.45), 0 4px 10px rgba(150, 35, 26, 0.25);
+}
+
+.game-screen .avatar-opponent {
+    background: linear-gradient(160deg, #2b5d8f 0%, #1c3f63 100%);
+    box-shadow: inset 0 0 0 2px rgba(214, 232, 255, 0.4), 0 4px 10px rgba(28, 63, 99, 0.25);
+}
+
+.game-screen .player-chip-name {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #fdf6e9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.game-screen .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+.game-screen .step-chip {
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.25);
+    color: #fdf6e9;
+    font-size: 14px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+/* 棋盘区域：占据中间全部空间并居中 */
+.game-screen .board-column {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4%;
+}
+
+.game-screen .board-shell {
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 8px;
+    border-radius: 16px;
+    background: linear-gradient(150deg, #5c3d22 0%, #3d2815 52%, #56381e 100%);
+    box-shadow: 0 12px 30px rgba(66, 42, 18, 0.3);
+}
+
+.game-screen .board {
+    border-radius: 8px;
+}
+
+.game-screen .turn-strip {
+    flex: 0 0 auto;
+    margin: 14px auto 0;
+}
+
+/* 底部功能条 */
+.game-screen .game-toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 4px;
+    padding: 8px;
+    background: linear-gradient(180deg, rgba(38, 30, 22, 0.96) 0%, rgba(26, 20, 14, 0.98) 100%);
+    border-top: 1px solid rgba(255, 224, 180, 0.12);
+}
+
+.game-screen .tool-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #d9c8a8;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex: 1 1 0;
+    padding: 6px 4px;
+    cursor: pointer;
+    border-radius: 10px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.game-screen .tool-btn:active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.game-screen .tool-btn:disabled {
+    opacity: 0.35;
+}
+
+.game-screen .tool-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.game-screen .tool-label {
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+
+/* 抽屉 */
+.game-screen .drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 18, 10, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 50;
+}
+
+.game-screen .side-column.drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(340px, 88vw);
+    max-width: 100%;
+    max-height: none;
+    height: auto;
+    margin: 0;
+    padding: 16px;
+    background: var(--paper);
+    box-shadow: -18px 0 44px rgba(50, 30, 12, 0.35);
+    z-index: 51;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transform: translateX(105%);
+    transition: transform 0.28s ease;
+    -webkit-overflow-scrolling: touch;
+}
+
+.game-screen .side-column.drawer.open {
+    transform: translateX(0);
+}
+
+.game-screen .side-column.drawer .panel {
+    order: 0;
+}
+
+.game-screen .drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 4px;
+}
+
+.game-screen .drawer-title {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: var(--ink);
+}
+
+/* ==================== 安卓分辨率自适应（顶部/底部安全区由原生 MainActivity 内边距处理） ==================== */
+
+/* 棋盘：同时受宽度与可视高度约束，短屏/横屏不溢出 */
+.game-screen .board-shell {
+    max-width: min(620px, calc((100vh - 250px) * 0.9));
+    max-width: min(620px, calc((100dvh - 250px) * 0.9));
+}
+
+/* 分辨率自适应：关键尺寸随视口缩放 */
+.game-screen .player-chip-name {
+    font-size: clamp(16px, 4.2vw, 20px);
+}
+
+.game-screen .avatar {
+    width: clamp(38px, 10vw, 46px);
+    height: clamp(38px, 10vw, 46px);
+    font-size: clamp(17px, 4.5vw, 22px);
+}
+
+.game-screen .step-chip {
+    font-size: clamp(12px, 3.4vw, 15px);
+}
+
+.game-screen .tool-icon {
+    font-size: clamp(20px, 5.5vw, 26px);
+}
+
+.game-screen .tool-label {
+    font-size: clamp(11px, 3vw, 13px);
 }
 

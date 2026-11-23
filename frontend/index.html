@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>中国象棋</title>
     <link rel="stylesheet" href="css/app.css">
 </head>
@@ -43,40 +43,66 @@
 </div>
 
 <div class="game-screen hidden" id="gameScreen">
-    <div class="page">
-        <header class="masthead">
-            <button id="backHomeBtn" class="back-btn" type="button">返回</button>
-            <div class="brand">
-                <span class="brand-seal">弈</span>
-                <div class="brand-text">
-                    <h1 id="gameTitle">双人对弈</h1>
-                    <p id="gameSubtitle">同屏热座 · 轮流落子</p>
-                </div>
+    <div class="page game-page">
+        <header class="game-topbar">
+            <button id="backHomeBtn" class="back-btn round" type="button" aria-label="返回">‹</button>
+            <div class="player-chip">
+                <span class="avatar" id="topAvatar">白</span>
+                <span class="player-chip-name" id="topPlayerName">小白</span>
             </div>
-            <div class="engine-badge">
-                <span>引擎</span>
-                <strong>Alpha-Beta · 静态搜索</strong>
+            <div class="topbar-right">
+                <span class="step-chip" id="stepCounter">0步</span>
+                <span class="avatar avatar-opponent" id="oppAvatar">弈</span>
             </div>
         </header>
 
-        <main class="layout">
-            <section class="board-column">
-                <div class="board-shell">
-                    <div class="board" id="board" aria-label="中国象棋棋盘">
-                        <svg class="board-svg" id="boardSvg" viewBox="0 0 900 1000" aria-hidden="true"></svg>
-                        <div class="layer layer-markers" id="markers"></div>
-                        <div class="layer layer-pieces" id="pieces"></div>
-                    </div>
+        <main class="board-column">
+            <div class="board-shell">
+                <div class="board" id="board" aria-label="中国象棋棋盘">
+                    <svg class="board-svg" id="boardSvg" viewBox="0 0 900 1000" aria-hidden="true"></svg>
+                    <div class="layer layer-markers" id="markers"></div>
+                    <div class="layer layer-pieces" id="pieces"></div>
                 </div>
-                <div class="turn-strip" id="turnStrip">
-                    <span class="turn-dot" id="turnDot"></span>
-                    <span id="turnText">正在连接…</span>
-                    <span class="check-flag" id="checkFlag">将军</span>
-                </div>
-                <p class="board-hint">先点击己方棋子选中，再点击高亮目标点落子。</p>
-            </section>
+            </div>
+            <div class="turn-strip" id="turnStrip">
+                <span class="turn-dot" id="turnDot"></span>
+                <span id="turnText">正在连接…</span>
+                <span class="check-flag" id="checkFlag">将军</span>
+            </div>
+        </main>
 
-            <aside class="side-column">
+        <nav class="game-toolbar">
+            <button id="menuBtn" class="tool-btn" type="button">
+                <span class="tool-icon">☰</span>
+                <span class="tool-label">菜单</span>
+            </button>
+            <button id="analyzeBtn" class="tool-btn" type="button">
+                <span class="tool-icon">◫</span>
+                <span class="tool-label">分析</span>
+            </button>
+            <button id="toolbarUndoBtn" class="tool-btn" type="button">
+                <span class="tool-icon">↶</span>
+                <span class="tool-label">悔棋</span>
+            </button>
+            <button id="hintBtn" class="tool-btn" type="button">
+                <span class="tool-icon">✦</span>
+                <span class="tool-label">提示</span>
+            </button>
+        </nav>
+    </div>
+
+    <div class="drawer-scrim hidden" id="drawerScrim"></div>
+    <aside class="side-column drawer" id="sideDrawer">
+        <div class="drawer-head">
+            <h2 class="drawer-title">菜单</h2>
+            <button id="drawerCloseBtn" class="mini-btn" type="button">关闭</button>
+        </div>
+
+        <div class="hidden">
+            <h1 id="gameTitle">双人对弈</h1>
+            <p id="gameSubtitle">同屏热座 · 轮流落子</p>
+        </div>
+
                 <section class="panel">
                     <h2>对战模式</h2>
                     <div class="mode-tabs">
@@ -96,22 +122,22 @@
                         </div>
 
                         <div class="ai-settings hidden" id="aiSettings">
-                            <label class="depth-field">
-                                执子
-                                <select id="playerSide">
-                                    <option value="RED" selected>执红（先手）</option>
-                                    <option value="BLACK">执黑（后手）</option>
-                                </select>
-                            </label>
-                            <label class="depth-field">
-                                AI 强度
-                                <select id="aiDepth">
-                                    <option value="4">入门 · 4 层</option>
-                                    <option value="6" selected>进阶 · 6 层</option>
-                                    <option value="10">高级 · 10 层</option>
-                                    <option value="20">顶级 · 20 层</option>
-                                </select>
-                            </label>
+                            <div class="depth-field">
+                                <span class="depth-label">执子</span>
+                                <div class="seg-group" id="playerSide">
+                                    <button type="button" class="seg-btn is-active" data-value="RED">执红（先手）</button>
+                                    <button type="button" class="seg-btn" data-value="BLACK">执黑（后手）</button>
+                                </div>
+                            </div>
+                            <div class="depth-field">
+                                <span class="depth-label">AI 强度</span>
+                                <div class="seg-group" id="aiDepth">
+                                    <button type="button" class="seg-btn" data-value="4">入门 · 4 层</button>
+                                    <button type="button" class="seg-btn is-active" data-value="6">进阶 · 6 层</button>
+                                    <button type="button" class="seg-btn" data-value="10">高级 · 10 层</button>
+                                    <button type="button" class="seg-btn" data-value="20">顶级 · 20 层</button>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="resign-group" id="pvpResignGroup">
@@ -187,11 +213,7 @@
                         <div class="history-empty">加载中…</div>
                     </div>
                 </section>
-            </aside>
-        </main>
-
-        <footer class="footer">服务端权威校验 · 令牌会话 · 单局并发保护 · 本地存档</footer>
-    </div>
+    </aside>
 </div>
 
 <dialog class="replay-dialog" id="replayDialog">

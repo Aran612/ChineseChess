@@ -67,7 +67,15 @@
         replayCloseBtn: document.getElementById("replayCloseBtn"),
         toast: document.getElementById("toast"),
         loading: document.getElementById("loading"),
-        loadingText: document.getElementById("loadingText")
+        loadingText: document.getElementById("loadingText"),
+        menuBtn: document.getElementById("menuBtn"),
+        drawerScrim: document.getElementById("drawerScrim"),
+        drawerCloseBtn: document.getElementById("drawerCloseBtn"),
+        sideDrawer: document.getElementById("sideDrawer"),
+        stepCounter: document.getElementById("stepCounter"),
+        toolbarUndoBtn: document.getElementById("toolbarUndoBtn"),
+        analyzeBtn: document.getElementById("analyzeBtn"),
+        hintBtn: document.getElementById("hintBtn")
     };
 
     let boardView = null;
@@ -82,6 +90,7 @@
     let mode = "LOCAL";
     let localMode = "PVP";
     let playerSide = "RED";
+    let aiDepth = 6;
     let state = null;
     let selected = null;
     let busy = false;
@@ -126,6 +135,18 @@
         elements.homePvpBtn.addEventListener("click", () => enterGame("PVP"));
         elements.homeRoomBtn.addEventListener("click", () => enterGame("ROOM"));
         elements.backHomeBtn.addEventListener("click", showHome);
+        elements.menuBtn.addEventListener("click", toggleDrawer);
+        elements.drawerCloseBtn.addEventListener("click", closeDrawer);
+        elements.drawerScrim.addEventListener("click", closeDrawer);
+        elements.toolbarUndoBtn.addEventListener("click", () => {
+            if (mode === "ROOM") {
+                handleRoomUndo();
+            } else {
+                undoMove();
+            }
+        });
+        elements.analyzeBtn.addEventListener("click", () => showToast("分析功能即将上线"));
+        elements.hintBtn.addEventListener("click", showHint);
         elements.newGameBtn.addEventListener("click", () => createNewGame(false));
         elements.undoBtn.addEventListener("click", undoMove);
         elements.pvpBtn.addEventListener("click", () => switchLocalMode("PVP"));
@@ -133,11 +154,20 @@
         elements.aiResignBtn.addEventListener("click", () => resignLocal(playerSide));
         elements.resignRedBtn.addEventListener("click", () => resignLocal("RED"));
         elements.resignBlackBtn.addEventListener("click", () => resignLocal("BLACK"));
-        elements.playerSide.addEventListener("change", () => {
-            playerSide = elements.playerSide.value;
+        elements.playerSide.addEventListener("click", (e) => {
+            const btn = e.target.closest(".seg-btn");
+            if (!btn) return;
+            elements.playerSide.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("is-active", b === btn));
+            playerSide = btn.dataset.value;
             if (localMode === "AI") {
                 createNewGame(false);
             }
+        });
+        elements.aiDepth.addEventListener("click", (e) => {
+            const btn = e.target.closest(".seg-btn");
+            if (!btn) return;
+            elements.aiDepth.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("is-active", b === btn));
+            aiDepth = Number(btn.dataset.value) || 6;
         });
         elements.exportBtn.addEventListener("click", exportNotation);
         elements.modeLocalBtn.addEventListener("click", () => switchMode("LOCAL"));
@@ -181,6 +211,43 @@
     function showGame() {
         elements.homeScreen.classList.add("hidden");
         elements.gameScreen.classList.remove("hidden");
+        closeDrawer();
+    }
+
+    function toggleDrawer() {
+        if (elements.sideDrawer.classList.contains("open")) {
+            closeDrawer();
+        } else {
+            openDrawer();
+        }
+    }
+
+    function openDrawer() {
+        elements.sideDrawer.classList.add("open");
+        elements.drawerScrim.classList.remove("hidden");
+    }
+
+    function closeDrawer() {
+        elements.sideDrawer.classList.remove("open");
+        elements.drawerScrim.classList.add("hidden");
+    }
+
+    function showHint() {
+        if (busy || !state || state.status !== "PLAYING") {
+            showToast("当前无法提示");
+            return;
+        }
+        if (mode === "LOCAL" && localMode === "AI" && state.turn !== playerSide) {
+            showToast("轮到 AI 行棋");
+            return;
+        }
+        try {
+            const next = window.XiangqiEngine.aiMove(state, 3);
+            const entry = next && next.history && next.history[next.history.length - 1];
+            showToast(entry && entry.notation ? "建议走法：" + entry.notation : "暂无提示");
+        } catch (error) {
+            showToast("暂无提示");
+        }
     }
 
     function enterGame(target) {
@@ -399,7 +466,7 @@
         if (state.turn === playerSide) {
             return;
         }
-        const depth = Number(elements.aiDepth.value) || 6;
+        const depth = aiDepth;
         setBusy(true);
         showLoading(true, "AI 正在思考…");
         try {
@@ -896,6 +963,7 @@
         }
         elements.plyText.textContent = state ? String(state.ply) : "0";
         elements.gameIdText.textContent = state ? shortId(state.gameId) : "—";
+        elements.stepCounter.textContent = (state ? state.ply : 0) + "步";
         if (mode === "ROOM") {
             elements.modeText.textContent = room ? "联网 · " + roleLabel(room.role) : "联网待加入";
         } else if (localMode === "AI") {
@@ -977,6 +1045,9 @@
         elements.roomResignBtn.disabled = busy || !room || !room.token || !playing;
         elements.roomUndoBtn.disabled = busy || !room || !room.token || !playing
             || (Boolean(undoRequest) && undoRequest === room.role);
+        elements.toolbarUndoBtn.disabled = busy || !state
+            || (mode === "LOCAL" ? state.history.length === 0
+                : (!room || !room.token || !playing));
     }
 
     function updateRoomPanel() {

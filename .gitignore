@@ -40,3 +40,6 @@ data/
 
 ### 前端/打包依赖 ###
 node_modules/
+
+### 签名密钥（勿提交，请本地备份） ###
+android/release.keystore
