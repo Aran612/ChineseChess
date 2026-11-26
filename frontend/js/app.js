@@ -65,6 +65,10 @@
         replayNextBtn: document.getElementById("replayNextBtn"),
         replayLastBtn: document.getElementById("replayLastBtn"),
         replayCloseBtn: document.getElementById("replayCloseBtn"),
+        resultDialog: document.getElementById("resultDialog"),
+        resultTitle: document.getElementById("resultTitle"),
+        resultReason: document.getElementById("resultReason"),
+        resultAgainBtn: document.getElementById("resultAgainBtn"),
         toast: document.getElementById("toast"),
         loading: document.getElementById("loading"),
         loadingText: document.getElementById("loadingText"),
@@ -75,7 +79,19 @@
         stepCounter: document.getElementById("stepCounter"),
         toolbarUndoBtn: document.getElementById("toolbarUndoBtn"),
         analyzeBtn: document.getElementById("analyzeBtn"),
-        hintBtn: document.getElementById("hintBtn")
+        hintBtn: document.getElementById("hintBtn"),
+        analyzeDialog: document.getElementById("analyzeDialog"),
+        analyzeCloseBtn: document.getElementById("analyzeCloseBtn"),
+        analyzeTurn: document.getElementById("analyzeTurn"),
+        evalBarRed: document.getElementById("evalBarRed"),
+        evalBarBlack: document.getElementById("evalBarBlack"),
+        evalScore: document.getElementById("evalScore"),
+        analyzeBest: document.getElementById("analyzeBest"),
+        analyzeDepth: document.getElementById("analyzeDepth"),
+        analyzeNodes: document.getElementById("analyzeNodes"),
+        analyzeDepthGroup: document.getElementById("analyzeDepthGroup"),
+        analyzeCandidates: document.getElementById("analyzeCandidates"),
+        analyzeRunBtn: document.getElementById("analyzeRunBtn")
     };
 
     let boardView = null;
@@ -91,6 +107,8 @@
     let localMode = "PVP";
     let playerSide = "RED";
     let aiDepth = 6;
+    let analyzeDepth = 6;
+    let analyzing = false;
     let state = null;
     let selected = null;
     let busy = false;
@@ -145,7 +163,7 @@
                 undoMove();
             }
         });
-        elements.analyzeBtn.addEventListener("click", () => showToast("分析功能即将上线"));
+        elements.analyzeBtn.addEventListener("click", openAnalyze);
         elements.hintBtn.addEventListener("click", showHint);
         elements.newGameBtn.addEventListener("click", () => createNewGame(false));
         elements.undoBtn.addEventListener("click", undoMove);
@@ -193,6 +211,23 @@
         elements.leaveRoomBtn.addEventListener("click", leaveRoom);
 
         elements.replayCloseBtn.addEventListener("click", () => elements.replayDialog.close());
+        elements.resultAgainBtn.addEventListener("click", () => {
+            elements.resultDialog.close();
+            if (mode === "ROOM") {
+                showToast("联网房间请通过房间操作重开");
+                return;
+            }
+            createNewGame(false);
+        });
+        elements.analyzeCloseBtn.addEventListener("click", () => elements.analyzeDialog.close());
+        elements.analyzeRunBtn.addEventListener("click", runAnalyze);
+        elements.analyzeDepthGroup.addEventListener("click", (e) => {
+            const btn = e.target.closest(".seg-btn");
+            if (!btn) return;
+            elements.analyzeDepthGroup.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("is-active", b === btn));
+            analyzeDepth = Number(btn.dataset.value) || 6;
+            runAnalyze();
+        });
         elements.replayFirstBtn.addEventListener("click", () => jumpReplay(0));
         elements.replayPrevBtn.addEventListener("click", () => jumpReplay(replayIndex - 1));
         elements.replayNextBtn.addEventListener("click", () => jumpReplay(replayIndex + 1));
@@ -248,6 +283,118 @@
         } catch (error) {
             showToast("暂无提示");
         }
+    }
+
+    function openAnalyze() {
+        if (!state) {
+            showToast("暂无对局可分析");
+            return;
+        }
+        if (state.status !== "PLAYING") {
+            showToast("对局已结束，无法分析");
+            return;
+        }
+        elements.analyzeTurn.textContent = "轮到 " + SIDE_LABEL[state.turn];
+        elements.analyzeTurn.className = "analyze-turn " + (state.turn === "RED" ? "is-red" : "is-black");
+        if (!elements.analyzeDialog.open) {
+            elements.analyzeDialog.showModal();
+        }
+        runAnalyze();
+    }
+
+    async function runAnalyze() {
+        if (analyzing || !state || state.status !== "PLAYING") {
+            return;
+        }
+        analyzing = true;
+        renderAnalyzing();
+        try {
+            await new Promise((resolve) => window.setTimeout(resolve, 30));
+            const result = window.XiangqiEngine.analyze(state, analyzeDepth, 2000 + analyzeDepth * 200);
+            renderAnalysis(result);
+        } catch (error) {
+            elements.analyzeCandidates.textContent = "";
+            const empty = document.createElement("div");
+            empty.className = "analyze-empty";
+            empty.textContent = "分析失败";
+            elements.analyzeCandidates.appendChild(empty);
+        } finally {
+            analyzing = false;
+        }
+    }
+
+    function renderAnalyzing() {
+        elements.evalScore.textContent = "分析中…";
+        elements.evalScore.className = "eval-score";
+        elements.analyzeBest.textContent = "…";
+        elements.analyzeDepth.textContent = "…";
+        elements.analyzeNodes.textContent = "…";
+        elements.analyzeCandidates.textContent = "";
+        const empty = document.createElement("div");
+        empty.className = "analyze-empty";
+        empty.textContent = "分析中…";
+        elements.analyzeCandidates.appendChild(empty);
+    }
+
+    function renderAnalysis(result) {
+        const redScore = result.turn === "RED" ? result.score : -result.score;
+        const pct = Math.max(5, Math.min(95, Math.round(50 + 50 * (redScore / (Math.abs(redScore) + 1000)))));
+        elements.evalBarRed.style.width = pct + "%";
+        elements.evalBarBlack.style.width = (100 - pct) + "%";
+        elements.evalScore.textContent = evalText(redScore, result.score);
+        elements.evalScore.className = "eval-score " + (redScore > 0 ? "is-red" : redScore < 0 ? "is-black" : "is-draw");
+        elements.analyzeBest.textContent = result.notation || "—";
+        elements.analyzeDepth.textContent = String(result.depth);
+        elements.analyzeNodes.textContent = formatNodes(result.nodes);
+        renderCandidates(result.candidates);
+    }
+
+    function evalText(redScore, sideScore) {
+        if (Math.abs(sideScore) >= 490000) {
+            return redScore > 0 ? "红方绝杀" : "黑方绝杀";
+        }
+        if (Math.abs(redScore) < 30) {
+            return "均势";
+        }
+        if (redScore > 0) {
+            return "红方优势 +" + redScore;
+        }
+        return "黑方优势 +" + (-redScore);
+    }
+
+    function renderCandidates(candidates) {
+        elements.analyzeCandidates.textContent = "";
+        const top = candidates.slice(0, 5);
+        if (top.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "analyze-empty";
+            empty.textContent = "无候选走法";
+            elements.analyzeCandidates.appendChild(empty);
+            return;
+        }
+        top.forEach((c, i) => {
+            const row = document.createElement("div");
+            row.className = "cand-row";
+            const rank = document.createElement("span");
+            rank.className = "cand-rank";
+            rank.textContent = String(i + 1);
+            const mv = document.createElement("span");
+            mv.className = "cand-move";
+            mv.textContent = c.notation || "—";
+            const sc = document.createElement("span");
+            sc.className = "cand-score";
+            sc.textContent = c.score > 0 ? "+" + c.score : String(c.score);
+            row.appendChild(rank);
+            row.appendChild(mv);
+            row.appendChild(sc);
+            elements.analyzeCandidates.appendChild(row);
+        });
+    }
+
+    function formatNodes(n) {
+        if (n >= 1000000) { return (n / 1000000).toFixed(1) + "M"; }
+        if (n >= 1000) { return (n / 1000).toFixed(1) + "k"; }
+        return String(n);
     }
 
     function enterGame(target) {
@@ -851,9 +998,31 @@
                 }
             }, 320);
             refreshRecords();
+            window.setTimeout(showResultDialog, 560);
         }
         if (next.status === "PLAYING" && next.inCheck && !previous.inCheck) {
             window.XiangqiSound.check();
+        }
+    }
+
+    function showResultDialog() {
+        if (!state || state.status === "PLAYING") {
+            return;
+        }
+        let title = "和棋";
+        let cls = "is-draw";
+        if (state.status === "RED_WIN") {
+            title = "红方胜";
+            cls = "is-red";
+        } else if (state.status === "BLACK_WIN") {
+            title = "黑方胜";
+            cls = "is-black";
+        }
+        elements.resultTitle.textContent = title;
+        elements.resultTitle.className = "result-title " + cls;
+        elements.resultReason.textContent = state.resultReason || "";
+        if (!elements.resultDialog.open) {
+            elements.resultDialog.showModal();
         }
     }
 

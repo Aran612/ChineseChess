@@ -241,6 +241,56 @@
     </div>
 </dialog>
 
+<dialog class="result-dialog" id="resultDialog">
+    <div class="result-body">
+        <h3 class="result-title" id="resultTitle">对局结束</h3>
+        <p class="result-reason" id="resultReason"></p>
+        <button id="resultAgainBtn" class="btn primary" type="button">再来一局</button>
+    </div>
+</dialog>
+
+<dialog class="analyze-dialog" id="analyzeDialog">
+    <div class="analyze-head">
+        <h3>局面分析</h3>
+        <button id="analyzeCloseBtn" class="btn ghost" type="button">关闭</button>
+    </div>
+    <div class="analyze-body">
+        <div class="analyze-turn" id="analyzeTurn">轮到 红方</div>
+        <div class="eval-wrap">
+            <div class="eval-bar">
+                <div class="eval-bar-red" id="evalBarRed"></div>
+                <div class="eval-bar-black" id="evalBarBlack"></div>
+            </div>
+            <div class="eval-labels">
+                <span>红方</span>
+                <span class="eval-score" id="evalScore">均势</span>
+                <span>黑方</span>
+            </div>
+        </div>
+        <div class="analyze-best">
+            <span class="analyze-label">最佳走法</span>
+            <strong class="analyze-best-move" id="analyzeBest">—</strong>
+        </div>
+        <div class="analyze-meta">
+            <span>深度 <strong id="analyzeDepth">0</strong> 层</span>
+            <span>节点 <strong id="analyzeNodes">0</strong></span>
+        </div>
+        <div class="depth-field">
+            <span class="depth-label">搜索深度</span>
+            <div class="seg-group" id="analyzeDepthGroup">
+                <button type="button" class="seg-btn" data-value="4">4 层</button>
+                <button type="button" class="seg-btn is-active" data-value="6">6 层</button>
+                <button type="button" class="seg-btn" data-value="10">10 层</button>
+                <button type="button" class="seg-btn" data-value="20">20 层</button>
+            </div>
+        </div>
+        <div class="analyze-candidates" id="analyzeCandidates">
+            <div class="analyze-empty">分析中…</div>
+        </div>
+        <button id="analyzeRunBtn" class="btn primary" type="button">重新分析</button>
+    </div>
+</dialog>
+
 <div class="toast" id="toast"></div>
 <div class="loading hidden" id="loading">
     <span class="spinner"></span>

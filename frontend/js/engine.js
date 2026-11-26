@@ -529,6 +529,63 @@
         return bestMove;
     }
 
+    /* ---------------- 局面分析 ---------------- */
+
+    function analyze(grid, side, maxDepth, timeLimitMs) {
+        deadline = Date.now() + Math.max(100, timeLimitMs);
+        nodes = 0;
+        const rootMoves = legalMoves(grid, side);
+        if (rootMoves.length === 0) {
+            return { move: null, notation: "", score: -MATE_SCORE, depth: 0, nodes: 0, candidates: [], turn: side };
+        }
+
+        let bestMove = rootMoves[0];
+        let bestScore = 0;
+        let completedDepth = 0;
+        let candidates = [];
+
+        try {
+            for (let depth = 1; depth <= Math.max(1, maxDepth); depth++) {
+                let localBest = null;
+                let localBestScore = -INF;
+                let alpha = -INF;
+                const scored = [];
+                for (const move of orderMoves(grid, rootMoves)) {
+                    const captured = make(grid, move);
+                    let score;
+                    try {
+                        score = -negamax(grid, opposite(side), depth - 1, -INF, -alpha, 1);
+                    } finally {
+                        unmake(grid, move, captured);
+                    }
+                    scored.push({ move: move, score: score, notation: notation(grid, side, move) });
+                    if (localBest == null || score > localBestScore) {
+                        localBestScore = score;
+                        localBest = move;
+                    }
+                    if (score > alpha) { alpha = score; }
+                }
+                completedDepth = depth;
+                bestMove = localBest || bestMove;
+                bestScore = localBestScore;
+                candidates = scored.slice().sort((a, b) => b.score - a.score);
+                if (localBestScore > 490000) { break; }
+            }
+        } catch (e) {
+            // 超时中断，保留上一层结果
+        }
+
+        return {
+            move: bestMove,
+            notation: notation(grid, side, bestMove),
+            score: bestScore,
+            depth: completedDepth,
+            nodes: nodes,
+            candidates: candidates,
+            turn: side
+        };
+    }
+
     /* ---------------- 记谱 ---------------- */
 
     const CHINESE_DIGITS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
@@ -776,6 +833,10 @@
         aiMove: function (view, depth) {
             const game = internalize(view);
             return aiMove(game, depth);
+        },
+        analyze: function (view, depth, timeLimitMs) {
+            const game = internalize(view);
+            return analyze(game.grid, game.turn, depth, timeLimitMs);
         },
         toView: toView
     };
