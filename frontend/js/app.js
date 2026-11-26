@@ -1002,6 +1002,7 @@
         }
         if (next.status === "PLAYING" && next.inCheck && !previous.inCheck) {
             window.XiangqiSound.check();
+            showCheckAlert();
         }
     }
 
@@ -1521,6 +1522,13 @@
         elements.toast.classList.add("show");
         window.clearTimeout(toastTimer);
         toastTimer = window.setTimeout(() => elements.toast.classList.remove("show"), 3200);
+    }
+
+    function showCheckAlert() {
+        elements.toast.textContent = "将军！";
+        elements.toast.classList.add("show", "is-check");
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => elements.toast.classList.remove("show", "is-check"), 2600);
     }
 
     function showLoading(visible, text) {

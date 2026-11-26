@@ -748,6 +748,23 @@ body {
     transform: translate(-50%, 0);
 }
 
+.toast.is-check {
+    bottom: 104px;
+    background: linear-gradient(160deg, #c33a2b 0%, #96231a 100%);
+    color: #fff6e9;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    padding: 14px 30px;
+    border-radius: 12px;
+    animation: checkPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes checkPulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(255, 235, 210, 0.5), 0 14px 34px rgba(150, 35, 26, 0.45); }
+    50% { box-shadow: 0 0 0 6px rgba(255, 235, 210, 0.85), 0 14px 34px rgba(150, 35, 26, 0.6); }
+}
+
 .loading {
     position: fixed;
     inset: 0;

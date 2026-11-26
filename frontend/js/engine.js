@@ -92,6 +92,51 @@
     const MATE_SCORE = 500000;
     const INF = 1000000;
 
+    /* ---------------- Zobrist 哈希（用于重复局面检测） ---------------- */
+
+    const TYPE_INDEX = { GENERAL: 0, ADVISOR: 1, ELEPHANT: 2, HORSE: 3, CHARIOT: 4, CANNON: 5, SOLDIER: 6 };
+
+    let zobristTable = [];
+    let zobristTurnHash = 0;
+    let currentHash = 0;
+    let repetitionCount = new Map();
+
+    function initZobrist() {
+        if (zobristTable.length > 0) { return; }
+        zobristTable = new Array(2 * 7 * ROWS * COLS);
+        let seed = 0x2f6e2b1;
+        const rnd = function () {
+            seed ^= seed << 13;
+            seed ^= seed >>> 17;
+            seed ^= seed << 5;
+            return seed >>> 0;
+        };
+        for (let i = 0; i < zobristTable.length; i++) {
+            zobristTable[i] = rnd();
+        }
+        zobristTurnHash = rnd();
+    }
+
+    function zobristKey(side, type, row, col) {
+        const s = side === RED ? 0 : 1;
+        const t = TYPE_INDEX[type];
+        return ((s * 7 + t) * ROWS + row) * COLS + col;
+    }
+
+    function hashOf(grid) {
+        initZobrist();
+        let h = 0;
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const p = grid[r][c];
+                if (p) { h ^= zobristTable[zobristKey(p.side, p.type, r, c)]; }
+            }
+        }
+        return h >>> 0;
+    }
+
+    initZobrist();
+
     function opposite(side) { return side === RED ? BLACK : RED; }
 
     function inside(row, col) { return row >= 0 && row < ROWS && col >= 0 && col < COLS; }
@@ -342,6 +387,12 @@
     function make(grid, move) {
         const mover = grid[move.from.row][move.from.col];
         const captured = grid[move.to.row][move.to.col];
+        currentHash ^= zobristTable[zobristKey(mover.side, mover.type, move.from.row, move.from.col)];
+        currentHash ^= zobristTable[zobristKey(mover.side, mover.type, move.to.row, move.to.col)];
+        if (captured) {
+            currentHash ^= zobristTable[zobristKey(captured.side, captured.type, move.to.row, move.to.col)];
+        }
+        currentHash ^= zobristTurnHash;
         grid[move.to.row][move.to.col] = mover;
         grid[move.from.row][move.from.col] = null;
         return captured;
@@ -349,6 +400,12 @@
 
     function unmake(grid, move, captured) {
         const mover = grid[move.to.row][move.to.col];
+        currentHash ^= zobristTurnHash;
+        if (captured) {
+            currentHash ^= zobristTable[zobristKey(captured.side, captured.type, move.to.row, move.to.col)];
+        }
+        currentHash ^= zobristTable[zobristKey(mover.side, mover.type, move.to.row, move.to.col)];
+        currentHash ^= zobristTable[zobristKey(mover.side, mover.type, move.from.row, move.from.col)];
         grid[move.from.row][move.from.col] = mover;
         grid[move.to.row][move.to.col] = captured;
     }
@@ -447,26 +504,37 @@
         if ((++nodes & 1023) === 0 && Date.now() > deadline) {
             throw new Error("abort");
         }
-        if (ply >= 126) { return evaluate(grid, side); }
-        if (depth <= 0) { return quiescence(grid, side, alpha, beta, ply, 0); }
-
-        const moves = legalMoves(grid, side);
-        if (moves.length === 0) { return -MATE_SCORE + ply; }
-
-        let bestScore = -INF;
-        for (const move of orderMoves(grid, moves)) {
-            const captured = make(grid, move);
-            let score;
-            try {
-                score = -negamax(grid, opposite(side), depth - 1, -beta, -alpha, ply + 1);
-            } finally {
-                unmake(grid, move, captured);
-            }
-            if (score > bestScore) { bestScore = score; }
-            if (score > alpha) { alpha = score; }
-            if (alpha >= beta) { break; }
+        // 重复局面检测：同一局面再次出现按和棋处理，规避长将/长捉循环
+        const h = currentHash >>> 0;
+        const seen = repetitionCount.get(h) || 0;
+        if (seen >= 1) {
+            return 0;
         }
-        return bestScore;
+        repetitionCount.set(h, seen + 1);
+        try {
+            if (ply >= 126) { return evaluate(grid, side); }
+            if (depth <= 0) { return quiescence(grid, side, alpha, beta, ply, 0); }
+
+            const moves = legalMoves(grid, side);
+            if (moves.length === 0) { return -MATE_SCORE + ply; }
+
+            let bestScore = -INF;
+            for (const move of orderMoves(grid, moves)) {
+                const captured = make(grid, move);
+                let score;
+                try {
+                    score = -negamax(grid, opposite(side), depth - 1, -beta, -alpha, ply + 1);
+                } finally {
+                    unmake(grid, move, captured);
+                }
+                if (score > bestScore) { bestScore = score; }
+                if (score > alpha) { alpha = score; }
+                if (alpha >= beta) { break; }
+            }
+            return bestScore;
+        } finally {
+            repetitionCount.set(h, seen);
+        }
     }
 
     function quiescence(grid, side, alpha, beta, ply, qDepth) {
@@ -497,6 +565,9 @@
     function search(grid, side, maxDepth, timeLimitMs) {
         deadline = Date.now() + Math.max(100, timeLimitMs);
         nodes = 0;
+        currentHash = hashOf(grid);
+        repetitionCount = new Map();
+        repetitionCount.set(currentHash >>> 0, 1);
         const rootMoves = legalMoves(grid, side);
         if (rootMoves.length === 0) { return null; }
 
@@ -534,6 +605,9 @@
     function analyze(grid, side, maxDepth, timeLimitMs) {
         deadline = Date.now() + Math.max(100, timeLimitMs);
         nodes = 0;
+        currentHash = hashOf(grid);
+        repetitionCount = new Map();
+        repetitionCount.set(currentHash >>> 0, 1);
         const rootMoves = legalMoves(grid, side);
         if (rootMoves.length === 0) {
             return { move: null, notation: "", score: -MATE_SCORE, depth: 0, nodes: 0, candidates: [], turn: side };
